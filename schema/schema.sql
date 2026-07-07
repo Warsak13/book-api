@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
     password TEXT NOT NULL,               -- bcrypt hash, never plaintext
-    email VARCHAR(255) UNIQUE,
+    email VARCHAR(255) UNIQUE NOT NULL,
     reset_token TEXT,
     reset_expiretime TIMESTAMP,
     created_at TIMESTAMP DEFAULT NOW()
