@@ -1,7 +1,6 @@
-// swagger.js
-const swaggerJsdoc = require('swagger-jsdoc');
+import swaggerJsdoc from 'swagger-jsdoc';
 
-const options = {
+const options: swaggerJsdoc.Options = {
     definition: {
         openapi: '3.0.0',
         info: {
@@ -20,7 +19,8 @@ const options = {
             }
         }
     },
-    apis: ['./Book_API.js'],
+    // Updated path to scan your new TypeScript files inside the src folder
+    apis: ['./src/*.ts'], 
 };
 
-module.exports = swaggerJsdoc(options);
+export default swaggerJsdoc(options);

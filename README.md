@@ -69,7 +69,14 @@ If any command returns an error, that dependency is either not installed or not 
 ```
 
 5. Start the server
+   
+   For development mode (with hot-reloading via `ts-node`):
 ```bash
+   npm run dev
+```
+   For production mode (compiles Typesript into native Javascript and launches on the dist/ folder):
+```bash
+   npm run build
    npm start
 ```
 
@@ -85,13 +92,22 @@ http://localhost:6780/api-docs
 
 This provides a live, browsable interface for every endpoint — including request/response schemas and the ability to execute real requests directly from the browser.
 
-### A note on the "Authorize" button
+### A Note on Swagger UI Authentication
 
-You'll see a padlock icon 🔒 next to protected routes, and an "Authorize" button at the top of the page. Ignore it. It's decorative at this point — a bit like a doorbell wired to nothing, still very pretty, still fools everyone the first time.
+You will notice an **"Authorize"** button and padlock icons (`🔒`) within the Swagger UI. These elements can be disregarded. 
 
-This API uses **`httpOnly` cookie-based authentication**, not bearer tokens. That means:
-- There's no token to copy-paste anywhere, because the server deliberately hides it from JavaScript (yes, even Swagger's own JavaScript) as a security measure.
-- Once you log in, your browser silently holds onto a cookie and attaches it to every future request automatically — no manual step required, no button to click, no ritual to perform.
+This API implements **`httpOnly` cookie-based authentication** rather than Bearer tokens (Authorization headers). 
+
+* **Enhanced Security:** The JWT is issued inside a cookie flagged as `httpOnly`. This prevents client-side JavaScript—including the Swagger UI interface—from accessing or reading the token, mitigating Cross-Site Scripting (XSS) risks.
+* **Automated Handling:** Because cookies are managed natively by the browser, credentials are automatically appended to subsequent cross-origin requests matching the scope. No manual token management or configuration is required within the UI.
+
+### How to Test Protected Endpoints:
+
+1. **Register an Account:** Send a request to `POST /register` to create user credentials.
+2. **Authenticate:** Send a request to `POST /login`. The server will return a standard success payload and set the secure cookie in your browser headers.
+3. **Execute Protected Routes:** Skip the Swagger "Authorize" dialog entirely. Proceed directly to any protected endpoint (e.g., `POST /book`) and click **Execute**. The browser will implicitly forward the active session cookie, and the request will authorize successfully.
+
+To verify the authentication mechanics, calling `POST /logout` or allowing the 24-hour cookie lifecycle to expire will result in the expected `401 Unauthorized` responses on protected routes.
 
 **To test authenticated routes:**
 1. Register a user via `POST /register`.
