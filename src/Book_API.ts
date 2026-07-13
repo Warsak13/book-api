@@ -11,26 +11,27 @@ import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from './swagger';
 import { winston_logger, pool, redisClient } from './config';
 import { limiter } from './middleware';
-
+redisClient
 import bookRoutes from './routes/books';
 import reviewRoutes from './routes/reviews';
 import authRoutes from './routes/auth';
 
 const app: Application = express();
+app.set('trust proxy', 1)
 
 // --- CORS setup ---
 const normalize = (url: string): string => url.replace(/\/$/, '').toLowerCase();
 
-const allowedOrigins: string[] = process.env.ALLOWED_ORIGINS
+const allowedOrigins: string[] = (process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
-    : ['http://localhost:3000', 'http://localhost:6780'];
+    : ['http://localhost:3000', 'http://localhost:6780']).map(normalize);
 
 app.use(cors({
     origin: (origin, callback) => {
         if (!origin || allowedOrigins.includes(normalize(origin))) {
             callback(null, true);
         } else {
-            callback(new Error('Link filed by CORS, access not allowed'));
+            callback(new Error('Link blocked by CORS, access not allowed'));
         }
     }
 }));
@@ -45,7 +46,8 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.get('/health', async (req: Request, res: Response) => {
     try {
         await pool.query('SELECT 1');
-        res.status(200).json({ status: 'success', db: 'connected', redis: redisClient.isOpen ? 'connected' : 'down' });
+        const redisStatus = await redisClient.ping().then(() => 'connected').catch(() => 'down')
+        res.status(200).json({ status: 'success', db: 'connected', redis: redisStatus});
     } catch (err) {
         res.status(503).json({ status: 'error', error: err instanceof Error ? err.message : 'Unknown error' });
     }
@@ -60,27 +62,26 @@ app.use((req, res) => {
 });
 
 app.use((err: any, req: Request & { user?: any }, res: Response, _next: NextFunction) => {
-    winston_logger.error({
-        message: err.message,
-        stack: err.stack,
-        method: req.method,
-        path: req.originalUrl,
-        userId: req.user?.id || 'anonymous'
-    });
-    res.status(500).json({ error: 'Internal server error' });
+    const status = err.statusCode || 500;
+    winston_logger.error({ message: err.message, stack: err.stack, method: req.method, path: req.originalUrl, userId: req.user?.id || 'anonymous' });
+    res.status(status).json({ error: status === 500 ? 'Internal server error' : err.message });
 });
 
-
 const PORT = process.env.PORT || 6780;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`Running at server http://localhost:${PORT}`);
     winston_logger.info(`Running at server http://localhost:${PORT}`);
 });
 
 
-process.on('SIGTERM', async () => {
-    winston_logger.info('SIGTERM received, shutting down server...');
-    await pool.end();
-    await redisClient.quit();
-    process.exit(0);
-});
+const shutdown = async (signal: string) => {
+    winston_logger.info(`${signal} received, shutting down server...`);
+    server.close(async () => {
+        await pool.end();
+        await redisClient.quit();
+        process.exit(0);
+    });
+};
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
