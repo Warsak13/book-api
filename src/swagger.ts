@@ -1,5 +1,6 @@
 import swaggerJsdoc from 'swagger-jsdoc';
 
+const isProduction = process.env.NODE_ENV === 'production';
 const options: swaggerJsdoc.Options = {
     definition: {
         openapi: '3.0.0',
@@ -20,7 +21,9 @@ const options: swaggerJsdoc.Options = {
         }
     },
     // Updated path to scan your new TypeScript files inside the src folder
-    apis: ['./src/*.ts'], 
+    apis: isProduction
+        ? ['./dist/routes/*.js']
+        : ['./routes/*.ts'],
 };
 
 export default swaggerJsdoc(options);

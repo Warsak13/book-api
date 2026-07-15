@@ -36,8 +36,6 @@ const cookieOptions = {
  *               username:
  *                 type: string
  *                 example: book_lover21
- *                 email:
- *                 type: string 
  *               password:
  *                 type: string
  *                 example: Person_123!
@@ -101,6 +99,8 @@ router.post('/login', authLimiter, validatelogin, asynchandler(async (req: Reque
  *               password:
  *                 type: string
  *                 description: Must be 8+ chars with uppercase, lowercase, number, and special char
+ *               email:
+ *                 type: string
  *     responses:
  *       201:
  *         description: User created
