@@ -1,6 +1,7 @@
-import dotenv from 'dotenv';
-dotenv.config();
+import dotenvx from '@dotenvx/dotenvx';
+dotenvx.config({quiet: true});
 
+import {pool} from './db'
 import { Pool } from 'pg';
 import * as redis from 'redis';
 import winston from 'winston';
@@ -21,26 +22,28 @@ const combinedRotateTransport = new winston.transports.DailyRotateFile({
     maxFiles: '14d'
 });
 
+const transports: winston.transport[] = [errorRotateTransport, combinedRotateTransport];
+
+if (process.env.NODE_ENV !== 'production') {
+    transports.push(new winston.transports.Console({
+        format: winston.format.combine(winston.format.colorize(), winston.format.simple())
+    }));
+}
+
 const winston_logger = winston.createLogger({
-    level: 'info',
+    level: process.env.LOG_LEVEL || 'info',
     format: winston.format.combine(
         winston.format.timestamp(),
         winston.format.errors({ stack: true }),
         winston.format.json()
     ),
-    transports: [errorRotateTransport, combinedRotateTransport]
+    transports
 });
 
-const pool = new Pool({
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 5432,
-    database: process.env.DB_NAME
-});
 
 const redisClient = redis.createClient({
     socket: {
+        host: process.env.REDIS_HOST || 'localhost',
         port: process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT, 10) : 6379,
         reconnectStrategy: (retries: number): number | false => {
             if (retries > 3) {

@@ -1,6 +1,6 @@
 // routes/books.ts
 import { Router, Request, Response } from 'express';
-import { Auth, validatebook, validatebookUpdate, asynchandler } from '../middleware';
+import { Auth, validatebook, validatebookUpdate, asynchandler, userAwareLimiter } from '../middleware';
 import { pool, redisClient, winston_logger } from '../config';
 
 const router = Router();
@@ -128,7 +128,7 @@ router.get('/:id', asynchandler(async (req: Request, res: Response) => {
  *       401:
  *         description: No token
  */
-router.post('/', Auth, validatebook, asynchandler(async (req: Request & { user?: any }, res: Response) => {
+router.post('/', Auth, userAwareLimiter, validatebook, asynchandler(async (req: Request & { user?: any }, res: Response) => {
     const { book_name, type } = req.body;
     const user_id = req.user.id;
     
@@ -196,7 +196,7 @@ router.post('/', Auth, validatebook, asynchandler(async (req: Request & { user?:
  *       404:
  *         description: Book not found
  */
-router.put('/:id', Auth, validatebookUpdate, asynchandler(async (req: Request & { user?: any }, res: Response) => {
+router.put('/:id', Auth, userAwareLimiter, validatebookUpdate, asynchandler(async (req: Request & { user?: any }, res: Response) => {
     const id = parseInt(req.params.id as string, 10);
     if (isNaN(id)) {
         return res.status(404).json({ message: 'id is not a number' });
@@ -241,7 +241,7 @@ router.put('/:id', Auth, validatebookUpdate, asynchandler(async (req: Request & 
     }
 }));
 
-router.delete('/:id', Auth, asynchandler(async (req: Request & { user?: any }, res: Response) => {
+router.delete('/:id', Auth, userAwareLimiter, asynchandler(async (req: Request & { user?: any }, res: Response) => {
     const id = parseInt(req.params.id as string, 10); // req.params.id is strictly a string, no 'as string' needed
     if (isNaN(id)) {
         return res.status(400).json({ success: false, message: 'id must be a valid number' });

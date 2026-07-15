@@ -36,6 +36,8 @@ const cookieOptions = {
  *               username:
  *                 type: string
  *                 example: book_lover21
+ *                 email:
+ *                 type: string 
  *               password:
  *                 type: string
  *                 example: Person_123!
@@ -76,7 +78,7 @@ router.post('/login', authLimiter, validatelogin, asynchandler(async (req: Reque
 
     res.cookie('token', token, {
         ...cookieOptions,
-        maxAge: 24 * 60 * 1000
+        maxAge: 24 * 60 * 60 * 1000
     });
 
     return res.json({ success: true, message: 'token sent successfully' });

@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { Auth, validatereview, asynchandler } from '../middleware';
+import { Auth, validatereview, asynchandler, userAwareLimiter } from '../middleware';
 import { pool } from '../config';
 
 const router = Router();
@@ -66,7 +66,7 @@ router.get('/', asynchandler(async (req: Request, res: Response) => {
  *       401:
  *         description: No token provided
  */
-router.post('/', Auth, validatereview, asynchandler(async (req: Request & { user?: any }, res: Response) => {
+router.post('/', Auth, userAwareLimiter, validatereview, asynchandler(async (req: Request & { user?: any }, res: Response) => {
     const { rew_text, rating, book_id } = req.body;
     const user_id = req.user.id;
 
@@ -125,7 +125,7 @@ router.post('/', Auth, validatereview, asynchandler(async (req: Request & { user
  *       403:
  *         description: You can only edit your own reviews
  */
-router.put('/:id', Auth, asynchandler(async (req: Request & { user?: any }, res: Response) => {
+router.put('/:id', Auth, userAwareLimiter, asynchandler(async (req: Request & { user?: any }, res: Response) => {
     const id = parseInt(req.params.id as string, 10);
     if (isNaN(id)) {
         return res.status(404).json({ message: 'id must be a number' });
@@ -178,7 +178,7 @@ router.put('/:id', Auth, asynchandler(async (req: Request & { user?: any }, res:
  *       403:
  *         description: You can only delete your own reviews
  */
-router.delete('/:id', Auth, asynchandler(async (req: Request & { user?: any }, res: Response) => {
+router.delete('/:id', Auth, userAwareLimiter, asynchandler(async (req: Request & { user?: any }, res: Response) => {
     const id = parseInt(req.params.id as string, 10); // req.params.id is always a string, no cast needed!
     if (isNaN(id)) {
         return res.status(400).json({ message: 'id must be a number' });

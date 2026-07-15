@@ -1,6 +1,12 @@
 // Book_API.ts
-import dotenv from 'dotenv';
-dotenv.config();
+if (process.env.NODE_ENV !== 'production' && !process.env.DOCKER) {
+    // This dynamically loads and runs dotenvx ONLY when on your local machine
+    import('@dotenvx/dotenvx').then((dotenvx) => {
+        dotenvx.default.config({ quiet: true });
+    }).catch(err => {
+        console.error("Failed to load dotenvx", err);
+    });
+}
 
 import express, { Application, Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
@@ -11,7 +17,7 @@ import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from './swagger';
 import { winston_logger, pool, redisClient } from './config';
 import { limiter } from './middleware';
-redisClient
+
 import bookRoutes from './routes/books';
 import reviewRoutes from './routes/reviews';
 import authRoutes from './routes/auth';
@@ -19,7 +25,6 @@ import authRoutes from './routes/auth';
 const app: Application = express();
 app.set('trust proxy', 1)
 
-// --- CORS setup ---
 const normalize = (url: string): string => url.replace(/\/$/, '').toLowerCase();
 
 const allowedOrigins: string[] = (process.env.ALLOWED_ORIGINS
@@ -68,7 +73,7 @@ app.use((err: any, req: Request & { user?: any }, res: Response, _next: NextFunc
 });
 
 const PORT = process.env.PORT || 6780;
-const server = app.listen(PORT, () => {
+const server = app.listen(Number(PORT), '0.0.0.0', () => {
     console.log(`Running at server http://localhost:${PORT}`);
     winston_logger.info(`Running at server http://localhost:${PORT}`);
 });

@@ -1,10 +1,10 @@
 // middleware.ts
 import { Request, Response, NextFunction } from 'express';
 import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
+import { RedisStore } from 'rate-limit-redis';
 import jwt from 'jsonwebtoken';
 import { winston_logger } from './config';
-
-
+import { redisClient } from './config';
 
 const customKeyGenerator = (
     req: Request & { user?: { id: number | string } }, 
@@ -13,8 +13,6 @@ const customKeyGenerator = (
     if (req.user?.id) {
         return String(req.user.id);
     }
-    
-    // Fallback to the default IP generator if no user ID exists
     const ip = req.ip;
     if (!ip) {
         throw new Error('IP address could not be determined for rate limiting');
@@ -22,17 +20,48 @@ const customKeyGenerator = (
     return ipKeyGenerator(ip);
 };
 
+const userAwareLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 150,                        
+    keyGenerator: customKeyGenerator,
+    message: {success : false, error: 'Too many request'},
+    skip: (req: Request & { user?: { id: number | string } }) => !req.user?.id,
+    store: new RedisStore({
+        prefix: "rl-user:",
+        sendCommand: async (...args: string[]) => {
+            return redisClient.sendCommand(args);
+        }
+    }),
+});
+
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    limit: 50,
+    limit: 100,
     keyGenerator: customKeyGenerator,
-    skip: (_req: Request, _res: Response): boolean => false
+    message: {success : false, error: 'Too many request'},
+    skip: (_req: Request, _res: Response): boolean => false,
+    store: new RedisStore({
+        sendCommand: async (...args: string[]) => {
+            return redisClient.sendCommand(args);
+        }
+    }),
 });
 
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    limit: 5, // five attempts, then sit in timeout and think about your choices
-    keyGenerator: customKeyGenerator
+    limit: 10,
+    keyGenerator: (req: Request) => {
+        const ip = req.ip;
+        if (!ip) throw new Error('IP address could not be determined for rate limiting');
+        return ipKeyGenerator(ip);
+    },
+    message: {success : false, error: 'Too many request'},
+    store: new RedisStore({
+        prefix: "rl-auth:",
+        sendCommand: async (...args: string[]) => {
+            return redisClient.sendCommand(args);
+        }
+    }),
 });
 
 const asynchandler = (fn: Function) => (req: Request, res: Response, next: NextFunction) => {
@@ -44,10 +73,10 @@ const validatebook = (req: Request, res: Response, next: NextFunction) => {
         return res.status(400).json({ error: 'Request body is required' });
     }
     const { book_name, type } = req.body;
-    if ((!book_name || !book_name.trim()) || (!type || !type.trim())) {
+    if ((!book_name || typeof book_name !== 'string' ||!book_name.trim()) || (!type || typeof type !== 'string'|| !type.trim())) {
         return res.status(400).json({ error: 'book_name or type not inputed' });
     }
-    if (!/^[a-zA-Z0-9\s'\-:,.!?]+$/.test(book_name)) {
+    if (!/^[\p{L}\p{N}\s'".,!?&:;()\-]+$/u.test(book_name)) {
         return res.status(400).json({ error: 'book_name must not contain invalid characters' });
     }
     if (book_name.length > 255) {
@@ -56,7 +85,7 @@ const validatebook = (req: Request, res: Response, next: NextFunction) => {
     if (type.length > 100) {
         return res.status(400).json({ error: 'type has exceeded the character limit' });
     }
-    if (!/^[a-zA-Z\s]+$/.test(type)) {
+    if (!/^[\p{L}\p{N}\s'".,!?&:;()\-]+$/u.test(type)) {
         return res.status(400).json({ error: 'type must only contain letters' });
     }
     next();
@@ -72,10 +101,10 @@ const validatebookUpdate = (req: Request, res: Response, next: NextFunction) => 
     if (book_name === undefined && type === undefined) {
         return res.status(400).json({ error: 'Provide at least book_name or type to update' });
     }
-    if (book_name !== undefined && (!book_name.trim() || !/^[a-zA-Z0-9\s'\-:,.!?]+$/.test(book_name))) {
+    if (book_name !== undefined && (!book_name.trim() || typeof book_name !== 'string' || !/^[\p{L}\p{N}\s'".,!?&:;()\-]+$/u.test(book_name))) {
         return res.status(400).json({ error: 'book_name must contain valid characters' });
     }
-    if (type !== undefined && (!type.trim() || !/^[a-zA-Z\s]+$/.test(type))) {
+    if (type !== undefined && (!type.trim() || typeof type !== 'string' || !/^[a-zA-Z\s]+$/.test(type))) {
         return res.status(400).json({ error: 'type must only contain letters' });
     }
     next();
@@ -101,7 +130,7 @@ const validatePassword = (req: Request, res: Response, next: NextFunction) => {
         return res.status(400).json({ error: 'Request body is required' });
     }
     const { password } = req.body;
-    if (!validatePass(password)) {
+    if (typeof password !== 'string' || !validatePass(password)) {
         return res.status(400).json({
             error: 'Password must be 8+ chars with uppercase, lowercase, number, and special char'
         });
@@ -171,4 +200,4 @@ const Auth = (req: Request & { user?: any }, res: Response, next: NextFunction) 
     }
 };
 
-export {Auth, validatebook, validatebookUpdate, asynchandler, validatePass, validatePassword, validatelogin, validatereview, validateuser, authLimiter, limiter}
+export {Auth, validatebook, validatebookUpdate, asynchandler, validatePass, userAwareLimiter, validatePassword, validatelogin, validatereview, validateuser, authLimiter, limiter}

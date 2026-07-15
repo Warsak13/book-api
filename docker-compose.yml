@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  book_api_postgres:
+    image: postgres:16-alpine
+    container_name: book_api_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data 
+      - ./schema/schema.sql:/docker-entrypoint-initdb.d/schema.sql 
+    networks:
+      - book_api_network
+
+  book_api_redis:
+    image: redis:alpine
+    container_name: book_api_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    networks:
+      - book_api_network
+
+  book_express_api:
+    build: .
+    container_name: book_express_api
+    restart: always
+    ports:
+      - "6780:6780" 
+    env_file:
+      - .env 
+    environment:
+      - DOCKER=true
+      - DOTENVX_QUIET=1 
+    volumes:
+      - ./logs:/app/logs 
+    depends_on:
+      - book_api_postgres
+      - book_api_redis
+    networks:
+      - book_api_network
+
+volumes:
+  pgdata:      
+  redisdata:   
+
+networks:
+  book_api_network:
+    driver: bridge 

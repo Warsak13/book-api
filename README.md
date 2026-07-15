@@ -20,29 +20,70 @@ portfolio piece to demonstrate backend architecture and API design.
 ## Tech stack
 Node.js, Express, PostgreSQL, Redis, JWT, bcrypt, express-rate-limit, Helmet, Swagger, cookie-parser, CORS, Winston, Nodemailer
 
-## Getting started
+## Getting Started
 
-### Prerequisites
+You can run this project either with **Docker** (recommended — no manual PostgreSQL/Redis setup required) or **manually** on your local machine.
 
-Before running this project, ensure the following are installed:
+---
 
-- **[Node.js](https://nodejs.org/)** (v18 or higher) — required to run the server
-- **[PostgreSQL](https://www.postgresql.org/download/)** — primary data store
-- **[Redis](https://redis.io/docs/getting-started/installation/)** (optional) — used for caching. If unavailable, the application automatically falls back to querying PostgreSQL directly, with no loss of functionality.
-- **npm** — included with Node.js installation
+### Option A: Docker (Recommended)
 
-Verify installation by running:
+**Prerequisites:** [Docker](https://docs.docker.com/get-docker/) and Docker Compose (included with Docker Desktop).
 
+1. Clone the repository
+```bash
+   git clone https://github.com/yourusername/book-api.git
+   cd book-api
+```
+
+2. Configure environment variables
+```bash
+   cp .env.example .env
+```
+   Fill in your own values — `JWT_SECRET`, database credentials, email credentials, etc.
+
+3. Start with the following command
+```bash
+   docker-compose up --build
+```
+   This automatically provisions PostgreSQL and Redis containers, builds the API image, 
+   and runs the database schema on first startup. No manual database installation or 
+   schema setup is required.
+
+4. Verify it's running
+```bash
+   curl http://localhost:6780/health
+```
+   Should return `{"status":"success","db":"connected","redis":"connected"}`.
+
+To stop everything:
+```bash
+docker-compose down
+```
+
+To stop and wipe all data (fresh start):
+```bash
+docker-compose down -v
+```
+
+---
+
+### Option B: Manual Setup
+
+**Prerequisites:**
+
+- **[Node.js](https://nodejs.org/)** (v18 or higher)
+- **[PostgreSQL](https://www.postgresql.org/download/)**
+- **[Redis](https://redis.io/docs/getting-started/installation/)** (optional — the app falls back to PostgreSQL if unavailable)
+- **npm** — included with Node.js
+
+Verify installation:
 ```bash
 node --version
 npm --version
 psql --version
 redis-cli --version
 ```
-
-If any command returns an error, that dependency is either not installed or not available in your system PATH.
-
-## Installation
 
 1. Clone the repository
 ```bash
@@ -54,35 +95,34 @@ If any command returns an error, that dependency is either not installed or not 
 ```bash
    npm install
 ```
-   This installs all required packages listed in `package.json`, including Express, PostgreSQL and Redis clients, JWT/bcrypt for authentication, and supporting middleware. No manual downloads are necessary.
 
 3. Configure environment variables
-   Copy the example file and populate it with your own values:
 ```bash
    cp .env.example .env
 ```
 
 4. Set up the database
-   Run the SQL schema against your PostgreSQL instance:
 ```bash
    psql -U your_user -d your_database -f schema/schema.sql
 ```
 
 5. Start the server
-   
-   For development mode (with hot-reloading via `ts-node`):
+
+   Development mode (hot-reloading via `ts-node`):
 ```bash
    npm run dev
 ```
-   For production mode (compiles Typesript into native Javascript and launches on the dist/ folder):
+
+   Production mode (compiled TypeScript):
 ```bash
    npm run build
    npm start
 ```
 
-   On successful startup, the console will display:
-   
-    {"level":"info","message":"Running at server http://localhost:6780"}
+On successful startup, the console will display:
+```
+{"level":"info","message":"Running at server http://localhost:6780"}
+```
 
 ## API Documentation
 
