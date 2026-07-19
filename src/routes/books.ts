@@ -36,15 +36,13 @@ router.get('/', asynchandler(async (req: Request, res: Response) => {
         }
     } catch (err) {
         if (err instanceof Error) {
-            winston_logger.info(`Redis failed, falling back to database: ${err.message}`);
+            winston_logger.warn(`Redis failed, falling back to database: ${err.message}`);
         }
-    } // <-- Added the missing closing block bracket here!
+    }
 
-    // 2. Database Fallback Operations
     let query = '';
-    const params: (string | number)[] = []; // Explicitly typed parameter array
-    
-    // Explicitly cast incoming query parameters
+    const params: (string | number)[] = []; 
+
     const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
     const limit = 10;
     const offset = (page - 1) * limit;
@@ -59,11 +57,9 @@ router.get('/', asynchandler(async (req: Request, res: Response) => {
         params.push(req.query.type as string);
     }
 
-    // Execute total element count
     const countResults = await pool.query(`SELECT COUNT(*) FROM book ${query}`, params);
     const total = countResults.rows[0].count;
 
-    // Execute limited chunk query
     const results = await pool.query(
         `SELECT * FROM book ${query} LIMIT $${params.length + 1} OFFSET $${params.length + 2}`, 
         [...params, limit, offset]
@@ -77,14 +73,13 @@ router.get('/', asynchandler(async (req: Request, res: Response) => {
         message: '/GET successful'
     };
 
-    // 3. Attempt to store results in Cache for future hits
     try {
         if (redisClient.isOpen) {
             await redisClient.setEx(cacheKey, 300, JSON.stringify(response));
         }
     } catch (err) {
         if (err instanceof Error) {
-            winston_logger.error(`Redis cache write failed: ${err.message}`);
+            winston_logger.warn("Redis cache write failed");
         }
     }
 
@@ -129,16 +124,15 @@ router.get('/:id', asynchandler(async (req: Request, res: Response) => {
  *         description: No token
  */
 router.post('/', Auth, userAwareLimiter, validatebook, asynchandler(async (req: Request & { user?: any }, res: Response) => {
-    const { book_name, type } = req.body;
+    const { book_name, type, price_cents } = req.body;
     const user_id = req.user.id;
     
     try {
         const result = await pool.query(
-            'INSERT INTO book (book_name, type, user_id) VALUES ($1, $2, $3) RETURNING *', 
-            [book_name, type, user_id]
+            'INSERT INTO book (book_name, type, price_cents, user_id) VALUES ($1, $2, $3, $4) RETURNING book_name, type, price_cents, user_id', 
+            [book_name, type, price_cents ?? 0 , user_id]
         );
 
-        // Dynamic Redis Cache Invalidation
         if (redisClient.isOpen) {
             for await (const keys of redisClient.scanIterator({ MATCH: 'book:list:*' })) {
                 const keyBatch = Array.isArray(keys) ? keys : [keys];
@@ -152,7 +146,6 @@ router.post('/', Auth, userAwareLimiter, validatebook, asynchandler(async (req: 
     }
     catch (err) {
         if (err instanceof Error) {
-            // Tell TypeScript to check for a database specific error code property
             const dbError = err as Error & { code?: string };
             if (dbError.code === '23505') {
                 return res.status(400).json({ error: 'Book already exists' });
@@ -242,7 +235,7 @@ router.put('/:id', Auth, userAwareLimiter, validatebookUpdate, asynchandler(asyn
 }));
 
 router.delete('/:id', Auth, userAwareLimiter, asynchandler(async (req: Request & { user?: any }, res: Response) => {
-    const id = parseInt(req.params.id as string, 10); // req.params.id is strictly a string, no 'as string' needed
+    const id = parseInt(req.params.id as string, 10);
     if (isNaN(id)) {
         return res.status(400).json({ success: false, message: 'id must be a valid number' });
     }

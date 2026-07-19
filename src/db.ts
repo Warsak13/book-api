@@ -1,11 +1,5 @@
-import dotenvx from '@dotenvx/dotenvx';
-dotenvx.config({quiet: true});
 import { Pool } from 'pg';
 
-// Initialize environment variables
-dotenvx.config();
-
-// Create a typed PostgreSQL connection pool
 const pool = new Pool({
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,

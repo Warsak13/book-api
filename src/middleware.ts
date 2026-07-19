@@ -1,10 +1,8 @@
 // middleware.ts
 import { Request, Response, NextFunction } from 'express';
 import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
-import { RedisStore } from 'rate-limit-redis';
 import jwt from 'jsonwebtoken';
 import { winston_logger } from './config';
-import { redisClient } from './config';
 
 const customKeyGenerator = (
     req: Request & { user?: { id: number | string } }, 
@@ -20,18 +18,16 @@ const customKeyGenerator = (
     return ipKeyGenerator(ip);
 };
 
+
 const userAwareLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 150,                        
     keyGenerator: customKeyGenerator,
     message: {success : false, error: 'Too many request'},
     skip: (req: Request & { user?: { id: number | string } }) => !req.user?.id,
-    store: new RedisStore({
-        prefix: "rl-user:",
-        sendCommand: async (...args: string[]) => {
-            return redisClient.sendCommand(args);
-        }
-    }),
+    skipFailedRequests: true, 
+    legacyHeaders: false,
+    standardHeaders: true,
 });
 
 const limiter = rateLimit({
@@ -40,11 +36,9 @@ const limiter = rateLimit({
     keyGenerator: customKeyGenerator,
     message: {success : false, error: 'Too many request'},
     skip: (_req: Request, _res: Response): boolean => false,
-    store: new RedisStore({
-        sendCommand: async (...args: string[]) => {
-            return redisClient.sendCommand(args);
-        }
-    }),
+    skipFailedRequests: true, 
+    legacyHeaders: false,
+    standardHeaders: true,
 });
 
 const authLimiter = rateLimit({
@@ -56,12 +50,9 @@ const authLimiter = rateLimit({
         return ipKeyGenerator(ip);
     },
     message: {success : false, error: 'Too many request'},
-    store: new RedisStore({
-        prefix: "rl-auth:",
-        sendCommand: async (...args: string[]) => {
-            return redisClient.sendCommand(args);
-        }
-    }),
+    skipFailedRequests: true, 
+    legacyHeaders: false,
+    standardHeaders: true,
 });
 
 const asynchandler = (fn: Function) => (req: Request, res: Response, next: NextFunction) => {
@@ -72,7 +63,7 @@ const validatebook = (req: Request, res: Response, next: NextFunction) => {
     if (!req.body || typeof req.body !== 'object') {
         return res.status(400).json({ error: 'Request body is required' });
     }
-    const { book_name, type } = req.body;
+    const { book_name, type, price_cents } = req.body;
     if ((!book_name || typeof book_name !== 'string' ||!book_name.trim()) || (!type || typeof type !== 'string'|| !type.trim())) {
         return res.status(400).json({ error: 'book_name or type not inputed' });
     }
@@ -88,6 +79,14 @@ const validatebook = (req: Request, res: Response, next: NextFunction) => {
     if (!/^[\p{L}\p{N}\s'".,!?&:;()\-]+$/u.test(type)) {
         return res.status(400).json({ error: 'type must only contain letters' });
     }
+    if (price_cents !== undefined) {
+        if (price_cents > 10000) {
+            return res.status(400).json({success: false, error: 'Price exceeds maxium allowed value'});
+        }
+        if (typeof price_cents !== 'number' || !Number.isInteger(price_cents) || price_cents < 0) {
+            return res.status(400).json({success: false, error: 'Price must be an non-negative whole number'})
+        }
+    }
     next();
 };
 
@@ -97,7 +96,7 @@ const validatebookUpdate = (req: Request, res: Response, next: NextFunction) => 
     if (!req.body || typeof req.body !== 'object') {
         return res.status(400).json({ error: 'Request body is required' });
     }
-    const { book_name, type } = req.body;
+    const { book_name, type, price_cents } = req.body;
     if (book_name === undefined && type === undefined) {
         return res.status(400).json({ error: 'Provide at least book_name or type to update' });
     }
@@ -106,6 +105,14 @@ const validatebookUpdate = (req: Request, res: Response, next: NextFunction) => 
     }
     if (type !== undefined && (!type.trim() || typeof type !== 'string' || !/^[a-zA-Z\s]+$/.test(type))) {
         return res.status(400).json({ error: 'type must only contain letters' });
+    }
+    if (price_cents !== undefined) {
+        if (price_cents > 10000) {
+            return res.status(400).json({success: false, error: 'Price exceeds maxium allowed value'});
+        }
+        if (typeof price_cents !== 'number' || !Number.isInteger(price_cents) || price_cents < 0) {
+            return res.status(400).json({success: false, error: 'Price must be an non-negative whole number'})
+        }
     }
     next();
 };

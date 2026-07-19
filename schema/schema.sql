@@ -13,8 +13,10 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS book (
     id SERIAL PRIMARY KEY,
     book_name VARCHAR(255) NOT NULL,
+    price_cents INTEGER DEFAULT 0,
     type VARCHAR(100) NOT NULL,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    metadata JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ DEFAULT NOW(), 
     UNIQUE (book_name, type)              
 );
@@ -27,6 +29,23 @@ CREATE TABLE IF NOT EXISTS reviews (
     book_id INTEGER NOT NULL REFERENCES book(id) ON DELETE CASCADE,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ DEFAULT NOW()  -- Optimized: Timezone-aware creation
+);
+-- Processes evens
+CREATE TABLE IF NOT EXISTS processed_events (
+    id SERIAL PRIMARY KEY,
+    stripe_event_id VARCHAR(255) UNIQUE NOT NULL,
+    raw_payload JSONB,
+    processed_at TIMESTAMP DEFAULT NOW()
+);
+-- Tracks purchases
+CREATE TABLE purchases (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    book_id INTEGER NOT NULL REFERENCES book(id) ON DELETE CASCADE,
+    stripe_session_id VARCHAR(255) UNIQUE NOT NULL,
+    status VARCHAR(20) DEFAULT 'pending', -- pending, completed, failed
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE (user_id, book_id)
 );
 
 -- Indexes

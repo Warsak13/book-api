@@ -1,11 +1,8 @@
-// Book_API.ts
-if (process.env.NODE_ENV !== 'production' && !process.env.DOCKER) {
-    // This dynamically loads and runs dotenvx ONLY when on your local machine
-    import('@dotenvx/dotenvx').then((dotenvx) => {
-        dotenvx.default.config({ quiet: true });
-    }).catch(err => {
-        console.error("Failed to load dotenvx", err);
-    });
+import dotenvx from '@dotenvx/dotenvx';
+if (!process.env.DOCKER_ENV) {
+    try {
+        dotenvx.config({ quiet: true });
+    } catch {}
 }
 
 import express, { Application, Request, Response, NextFunction } from 'express';
@@ -21,69 +18,75 @@ import { limiter } from './middleware';
 import bookRoutes from './routes/books';
 import reviewRoutes from './routes/reviews';
 import authRoutes from './routes/auth';
+import paymentRoutes from './routes/payment';
 
 const app: Application = express();
-app.set('trust proxy', 1)
+app.set('trust proxy', 1);
 
-const normalize = (url: string): string => url.replace(/\/$/, '').toLowerCase();
-
-const allowedOrigins: string[] = (process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
-    : ['http://localhost:3000', 'http://localhost:6780']).map(normalize);
-
-app.use(cors({
-    origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(normalize(origin))) {
-            callback(null, true);
-        } else {
-            callback(new Error('Link blocked by CORS, access not allowed'));
+// Global middleware
+app.use(express.json({
+    verify: (req: any, res, buf) => {
+        if (req.originalUrl === '/payments/webhooks/stripe') {
+            req.rawBody = buf;
         }
     }
 }));
-
+app.use(cors({ origin: '*' }));
 app.use(helmet());
 app.use(cookieParser());
-app.use(express.json());
 app.use(limiter);
 
+// Routes
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-
-app.get('/health', async (req: Request, res: Response) => {
-    try {
-        await pool.query('SELECT 1');
-        const redisStatus = await redisClient.ping().then(() => 'connected').catch(() => 'down')
-        res.status(200).json({ status: 'success', db: 'connected', redis: redisStatus});
-    } catch (err) {
-        res.status(503).json({ status: 'error', error: err instanceof Error ? err.message : 'Unknown error' });
-    }
-});
-
 app.use('/book', bookRoutes);
 app.use('/reviews', reviewRoutes);
-app.use('/', authRoutes); 
+app.use('/', authRoutes);
+app.use('/payments', paymentRoutes);
 
-app.use((req, res) => {
-    res.status(404).json({ error: `Cannot ${req.method} ${req.originalUrl}` });
+// Error Handling
+app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
+    winston_logger.error({ message: err.message, stack: err.stack });
+    res.status(err.statusCode || 500).json({ error: 'Internal server error' });
 });
 
-app.use((err: any, req: Request & { user?: any }, res: Response, _next: NextFunction) => {
-    const status = err.statusCode || 500;
-    winston_logger.error({ message: err.message, stack: err.stack, method: req.method, path: req.originalUrl, userId: req.user?.id || 'anonymous' });
-    res.status(status).json({ error: status === 500 ? 'Internal server error' : err.message });
+app.get('/success', (req, res) => {
+    res.status(200).send('<h1>Payment Successful!</h1><p>Thank you for your book purchase. Your order is being processed.</p>');
+});
+
+app.get('/cancel', (req, res) => {
+    res.status(200).send('<h1>Payment Cancelled</h1><p>Your transaction was cancelled. No charges were made.</p>');
 });
 
 const PORT = process.env.PORT || 6780;
 const server = app.listen(Number(PORT), '0.0.0.0', () => {
     console.log(`Running at server http://localhost:${PORT}`);
-    winston_logger.info(`Running at server http://localhost:${PORT}`);
 });
-
 
 const shutdown = async (signal: string) => {
     winston_logger.info(`${signal} received, shutting down server...`);
+    
     server.close(async () => {
-        await pool.end();
-        await redisClient.quit();
+        winston_logger.info('HTTP server closed.');
+        
+
+        try {
+            if (redisClient) {
+
+                await redisClient.quit();
+                winston_logger.info('Redis connection closed.');
+            }
+        } catch (err) {
+
+            winston_logger.warn('Redis was already closed, skipping.');
+        }
+
+        try {
+            await pool.end();
+            winston_logger.info('Postgres pool closed.');
+        } catch (err) {
+            winston_logger.warn('Error closing Postgres pool:', err);
+        }
+
         process.exit(0);
     });
 };

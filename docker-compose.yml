@@ -35,9 +35,12 @@ services:
     ports:
       - "6780:6780" 
     env_file:
-      - .env 
+      - .env
     environment:
+      - DB_HOST=book_api_postgres
+      - REDIS_HOST=book_api_redis
       - DOCKER=true
+      - DOCKER_ENV=true
       - DOTENVX_QUIET=1 
     volumes:
       - ./logs:/app/logs 

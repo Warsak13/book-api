@@ -1,7 +1,7 @@
 # Book API
 A REST API for managing books and user reviews, with full CRUD functionality, 
 JWT authentication, ownership-based permissions, Redis caching with automatic 
-fallback to PostgreSQL, and rate limiting to guard against abuse. CORS is 
+fallback to PostgreSQL, stripe payment method and rate limiting to guard against abuse. CORS is 
 configured to control exactly which frontends can talk to it. Built as a 
 portfolio piece to demonstrate backend architecture and API design.
 
@@ -16,9 +16,11 @@ portfolio piece to demonstrate backend architecture and API design.
 - Ownership-based authorization
 - Sending emails via Nodemailer
 - Parameterized queries to prevent SQL injection
+- Stripe payment method 
+- Docker containerization
 
 ## Tech stack
-Node.js, Express, PostgreSQL, Redis, JWT, bcrypt, express-rate-limit, Helmet, Swagger, cookie-parser, CORS, Winston, Nodemailer
+Node.js, Express, PostgreSQL, Redis, JWT, bcrypt, express-rate-limit, Helmet, Swagger, cookie-parser, CORS, Winston, Nodemailer, stripe, docker
 
 ## Getting Started
 
@@ -157,6 +159,19 @@ To verify the authentication mechanics, calling `POST /logout` or allowing the 2
 
 If you log out, clear cookies, or the cookie expires (24h), protected routes will correctly reject you with a `401 No token` — which is your proof the whole thing is actually working, not just politely lying to you.
 
+## Testing Payments Locally
+
+Stripe webhooks require a real, signed event — you can't simulate this with Postman alone.
+
+1. Install the [Stripe CLI](https://stripe.com/docs/stripe-cli)
+2. Forward webhook events to your local server:
+```bash
+   stripe listen --forward-to localhost:6780/payments/webhooks/stripe
+```
+3. Copy the webhook signing secret it prints into `STRIPE_WEBHOOK_SECRET` in your `.env`
+4. Create a checkout session via `POST /payments/create-checkout-session/:bookId` (requires login)
+5. Open the returned URL in a browser and complete payment using Stripe's test card: `4242 4242 4242 4242`, any future expiry, any CVC
+
 ## API Reference
 
 | Method | Endpoint             | Auth Required | Description                              |
@@ -176,6 +191,9 @@ If you log out, clear cookies, or the cookie expires (24h), protected routes wil
 | PUT    | `/reviews/:id`       | Yes (owner)    | Edit your own review                      |
 | DELETE | `/reviews/:id`       | Yes (owner)    | Delete your own review                    |
 | GET    | `/health`            | No             | Check server/DB/Redis status              |
+| POST   | `/payments/create-checkout-session/:bookId` | Yes | Create a stripe checout session for a priced book |
+| POST   | `/payments/webhooks/stripe` | No (stripe-signed)  | Stripe webhooks - confirms and records completed payments | 
+| GET    | `/payments/purchases/:bookId` | Yes               | Checks whether the current book user owns the book |
 
 ## Environment Variables
 
@@ -188,13 +206,15 @@ If you log out, clear cookies, or the cookie expires (24h), protected routes wil
 | `EMAIL_USER`, `EMAIL_PASS` | Yes (for password reset) | Gmail credentials for Nodemailer |
 | `ALLOWED_ORIGINS` | Yes | Comma-separated list of frontend URLs allowed via CORS |
 | `NODE_ENV` | Yes | `development` or `production` — controls cookie security behavior |
+| `STRIPE_SECRET_KEY` | Yes (for payments) | Your Stripe secret key (test or live) |
+| `STRIPE_WEBHOOK_SECRET` | Yes (for payments) | Webhook signing secret from Stripe dashboard or `stripe listen` |
+| `FRONTEND_URL` | Yes (for payments) | Used for Stripe checkout success/cancel redirect URLs |
 
 ## Limitations
 
 - No file upload support
 - Reviews cannot support images
 - No refresh token flow
-- No payment method
 
 ## Notes
 
