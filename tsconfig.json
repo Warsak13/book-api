@@ -2,14 +2,14 @@
   // Visit https://aka.ms/tsconfig to read more about this file
   "compilerOptions": {
     // File Layout
-    "rootDir": "./src",                        /* Tells TS your active code lives inside the /src folder */
-    "outDir": "./dist",                        /* Tells TS to output the compiled JavaScript into a /dist folder */
+    "rootDir": "./src",                       
+    "outDir": "./dist",                        
 
     // Environment Settings
-    "module": "commonjs",                      /* Crucial for standard Express/Node apps using 'require' or standard imports */
-    "target": "es2022",                        /* Compiles down to modern, high-performance JavaScript */
-    "allowJs": false,                          /* Allows you to mix .js and .ts files while you translate the project */
-    "esModuleInterop": true,                   /* Prevents import compatibility bugs with packages like Express */
+    "module": "commonjs",                      
+    "target": "es2022",                        
+    "allowJs": false,                          
+    "esModuleInterop": true,                   
 
     // Other Outputs
     "sourceMap": true,
@@ -22,7 +22,7 @@
 
     // Recommended Options
     "strict": true,
-    "verbatimModuleSyntax": false,             /* Set to false to avoid annoying syntax flags during standard Express imports */
+    "verbatimModuleSyntax": false,             
     "isolatedModules": true,
     "moduleDetection": "force",
     "skipLibCheck": true
