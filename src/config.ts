@@ -1,5 +1,5 @@
-import {pool} from './db'
-import * as redis from 'redis';
+import { pool } from './db';
+import { createClient, RedisClientType } from 'redis';
 import winston from 'winston';
 import 'winston-daily-rotate-file';
 
@@ -27,19 +27,19 @@ const warnRotateTransport = new winston.transports.DailyRotateFile({
     maxFiles: '14d'
 });
 
-const transports: winston.transport[] = [errorRotateTransport, combinedRotateTransport];
+const transports: winston.transport[] = [errorRotateTransport, combinedRotateTransport, warnRotateTransport];
 if (process.env.NODE_ENV !== 'production') {
     transports.push(new winston.transports.Console({
         level: 'info', 
         format: winston.format.combine(winston.format.colorize(), winston.format.simple())
     }));
 } else {
-
     transports.push(new winston.transports.Console({
         level: 'warn', 
         format: winston.format.json()
     }));
 }
+
 const winston_logger = winston.createLogger({
     format: winston.format.combine(
         winston.format.timestamp(),
@@ -49,7 +49,7 @@ const winston_logger = winston.createLogger({
     transports
 });
 
-const redisClient = redis.createClient({
+const redisClient: RedisClientType = createClient({
     socket: {
         host: process.env.REDIS_HOST || 'localhost',
         port: process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT as string, 10) : 6379,
