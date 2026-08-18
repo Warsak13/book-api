@@ -83,7 +83,6 @@ router.get('/', asynchandler(async (req: Request, res: Response) => {
         }
     }
 
-    // Return successful response payloads
     return res.status(200).json(response);
 }));
 

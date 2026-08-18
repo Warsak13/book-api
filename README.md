@@ -82,7 +82,7 @@ docker-compose down -v
 Verify installation:
 ```bash
 node --version
-npm --version
+pnpm --version
 psql --version
 redis-cli --version
 ```
@@ -95,7 +95,7 @@ redis-cli --version
 
 2. Install dependencies
 ```bash
-   npm install
+   pnpm install
 ```
 
 3. Configure environment variables
@@ -112,13 +112,13 @@ redis-cli --version
 
    Development mode (hot-reloading via `ts-node`):
 ```bash
-   npm run dev
+   pnpm run dev
 ```
 
    Production mode (compiled TypeScript):
 ```bash
-   npm run build
-   npm start
+   pnpm run build
+   pnpm start
 ```
 
 On successful startup, the console will display:

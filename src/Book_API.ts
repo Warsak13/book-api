@@ -23,6 +23,8 @@ import paymentRoutes from './routes/payment';
 const app: Application = express();
 app.set('trust proxy', 1);
 
+app.use(express.static('public'));
+
 // Global middleware
 app.use(express.json({
     verify: (req: any, res, buf) => {

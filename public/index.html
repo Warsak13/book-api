@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book API QA Test Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 950px; margin: 40px auto; padding: 20px; line-height: 1.6; color: #333; background: #f9f9f9; }
+        .section { background: #fff; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        h2 { border-bottom: 2px solid #eee; padding-bottom: 8px; margin-top: 0; color: #2c3e50; }
+        input, textarea, select, button { display: block; width: 100%; margin-bottom: 10px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { background: #3498db; color: white; border: none; font-weight: bold; cursor: pointer; }
+        button:hover { background: #2980b9; }
+        .btn-secondary { background: #7f8c8d; }
+        .btn-secondary:hover { background: #606f70; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        pre { background: #2c3e50; color: #ecf0f1; padding: 10px; border-radius: 4px; overflow-x: auto; max-height: 250px; }
+    </style>
+</head>
+<body>
+
+    <h1>Book API QA Test Dashboard</h1>
+    <p>This website is for testing and portfolio purposes only and is not meant for production use.</p>
+
+    <div class="section">
+        <h2>1. Authentication & User Management (/auth)</h2>
+        <div class="grid">
+            <div>
+                <h3>Login</h3>
+                <form id="loginForm">
+                    <input type="text" id="loginUsername" placeholder="Username" required>
+                    <input type="password" id="loginPassword" placeholder="Password" required>
+                    <button type="submit">Log In</button>
+                </form>
+                <button id="logoutBtn" class="btn-secondary" style="margin-top: 5px;">Log Out</button>
+            </div>
+            <div>
+                <h3>Register</h3>
+                <form id="registerForm">
+                    <input type="text" id="regUsername" placeholder="Username" required>
+                    <input type="email" id="regEmail" placeholder="Email" required>
+                    <input type="password" id="regPassword" placeholder="Password (8+ chars)" required>
+                    <button type="submit" class="btn-secondary">Register Account</button>
+                </form>
+            </div>
+        </div>
+        <div class="grid" style="margin-top: 15px;">
+            <div>
+                <h3>Forgot Password</h3>
+                <input type="email" id="forgotEmail" placeholder="Your account email">
+                <button id="forgotBtn" class="btn-secondary">Send Reset Link</button>
+            </div>
+            <div>
+                <h3>Reset Password</h3>
+                <input type="text" id="resetToken" placeholder="Paste reset token">
+                <input type="password" id="newPassword" placeholder="New Password" required>
+                <button id="resetBtn" class="btn-secondary">Reset Password</button>
+            </div>
+        </div>
+        <pre id="authResponse">Auth response will appear here...</pre>
+    </div>
+
+    <div class="section">
+        <h2>2. Book Catalog & Management (/book)</h2>
+        <div class="grid">
+            <div>
+                <h3>Fetch Catalog</h3>
+                <input type="text" id="searchQuery" placeholder="Search book name">
+                <input type="text" id="bookTypeQuery" placeholder="Filter by type">
+                <input type="number" id="pageQuery" placeholder="Page number" value="1">
+                <button id="fetchBooksBtn">Fetch Books</button>
+            </div>
+            <div>
+                <h3>Create New Book</h3>
+                <input type="text" id="newBookName" placeholder="Book Name" required>
+                <input type="text" id="newBookType" placeholder="Book Type" required>
+                <input type="number" id="newBookPrice" placeholder="Price in cents" required>
+                <button id="createBookBtn">Create Book</button>
+            </div>
+        </div>
+        <pre id="booksResponse">Catalog data will appear here...</pre>
+    </div>
+
+    <div class="section">
+        <h2>2b. Update or Delete Book by ID</h2>
+        <div class="grid">
+            <div>
+                <h3>Update Book</h3>
+                <input type="number" id="updateBookId" placeholder="Book ID" required>
+                <input type="text" id="updateBookName" placeholder="New Name">
+                <input type="text" id="updateBookType" placeholder="New Type">
+                <button id="updateBookBtn" style="background: #e67e22;">Update Book</button>
+            </div>
+            <div>
+                <h3>Delete Book</h3>
+                <input type="number" id="deleteBookId" placeholder="Book ID" required>
+                <button id="deleteBookBtn" style="background: #c0392b;">Delete Book</button>
+            </div>
+        </div>
+        <pre id="bookModifyResponse">Modify responses will appear here...</pre>
+    </div>
+
+    <div class="section">
+        <h2>3. Reviews (/reviews)</h2>
+        <div class="grid">
+            <div>
+                <h3>Get Reviews</h3>
+                <input type="number" id="reviewBookIdGet" placeholder="Book ID" required>
+                <button id="fetchReviewsBtn">Fetch Reviews</button>
+            </div>
+            <div>
+                <h3>Post Review</h3>
+                <input type="number" id="reviewBookIdPost" placeholder="Book ID" required>
+                <input type="number" id="reviewRating" placeholder="Rating (1-5)" min="1" max="5" required>
+                <textarea id="reviewText" placeholder="Write your review..." rows="2" required></textarea>
+                <button id="postReviewBtn">Submit Review</button>
+            </div>
+        </div>
+        <div class="grid" style="margin-top: 15px;">
+            <div>
+                <h3>Update Review (PUT /reviews/:id)</h3>
+                <input type="number" id="updateReviewId" placeholder="Review ID" required>
+                <input type="number" id="updateReviewRating" placeholder="New Rating (1-5)" min="1" max="5">
+                <textarea id="updateReviewText" placeholder="New review text..." rows="2"></textarea>
+                <button id="updateReviewBtn" style="background: #e67e22;">Update Review</button>
+            </div>
+            <div>
+                <h3>Delete Review (DELETE /reviews/:id)</h3>
+                <input type="number" id="deleteReviewId" placeholder="Review ID" required>
+                <button id="deleteReviewBtn" style="background: #c0392b;">Delete Review</button>
+            </div>
+        </div>
+        <pre id="reviewResponse">Review response will appear here...</pre>
+    </div>
+
+    <div class="section">
+        <h2>4. Stripe Payments & Checkout (/payments)</h2>
+        <input type="number" id="paymentBookId" placeholder="Book ID for Checkout" required>
+        <div class="grid">
+            <button id="checkoutBtn">Create Checkout Session & Redirect</button>
+            <button id="checkPurchaseBtn" class="btn-secondary">Check Purchase Status</button>
+        </div>
+        <pre id="paymentResponse">Payment response will appear here...</pre>
+    </div>
+
+    <script>
+        async function apiCall(url, options = {}, responseElementId = 'authResponse') {
+            const outputEl = document.getElementById(responseElementId);
+            try {
+                const res = await fetch(url, { credentials: 'include', ...options });
+                if (res.status === 429) {
+                    outputEl.innerText = '⚠️ Rate limit exceeded! Please wait 15 minutes before trying again.';
+                    return null;
+                }
+                const data = await res.json();
+                outputEl.innerText = JSON.stringify(data, null, 2);
+                return data;
+            } catch (err) {
+                outputEl.innerText = 'Error: ' + err.message;
+                return null;
+            }
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await apiCall('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: document.getElementById('loginUsername').value,
+                    password: document.getElementById('loginPassword').value
+                })
+            }, 'authResponse');
+        });
+
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await apiCall('/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: document.getElementById('regUsername').value,
+                    email: document.getElementById('regEmail').value,
+                    password: document.getElementById('regPassword').value
+                })
+            }, 'authResponse');
+        });
+
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            await apiCall('/logout', { method: 'POST' }, 'authResponse');
+        });
+
+        document.getElementById('forgotBtn').addEventListener('click', async () => {
+            await apiCall('/forgot_password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: document.getElementById('forgotEmail').value })
+            }, 'authResponse');
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', async () => {
+            await apiCall('/reset_password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    token: document.getElementById('resetToken').value,
+                    password: document.getElementById('newPassword').value
+                })
+            }, 'authResponse');
+        });
+
+        document.getElementById('fetchBooksBtn').addEventListener('click', async () => {
+            const search = document.getElementById('searchQuery').value;
+            const type = document.getElementById('bookTypeQuery').value;
+            const page = document.getElementById('pageQuery').value;
+            const params = new URLSearchParams();
+            if (search) params.append('search', search);
+            if (type) params.append('type', type);
+            if (page) params.append('page', page);
+
+            await apiCall(`/book?${params.toString()}`, {}, 'booksResponse');
+        });
+
+        document.getElementById('createBookBtn').addEventListener('click', async () => {
+            await apiCall('/book', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    book_name: document.getElementById('newBookName').value,
+                    type: document.getElementById('newBookType').value,
+                    price_cents: parseInt(document.getElementById('newBookPrice').value, 10)
+                })
+            }, 'booksResponse');
+        });
+
+        document.getElementById('updateBookBtn').addEventListener('click', async () => {
+            const id = document.getElementById('updateBookId').value;
+            const body = {};
+            const name = document.getElementById('updateBookName').value;
+            const type = document.getElementById('updateBookType').value;
+            if (name) body.book_name = name;
+            if (type) body.type = type;
+
+            await apiCall(`/book/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            }, 'bookModifyResponse');
+        });
+
+        document.getElementById('deleteBookBtn').addEventListener('click', async () => {
+            const id = document.getElementById('deleteBookId').value;
+            await apiCall(`/book/${id}`, { method: 'DELETE' }, 'bookModifyResponse');
+        });
+
+        document.getElementById('fetchReviewsBtn').addEventListener('click', async () => {
+            const bookId = document.getElementById('reviewBookIdGet').value;
+            await apiCall(`/reviews?book_id=${bookId}`, {}, 'reviewResponse');
+        });
+
+        document.getElementById('postReviewBtn').addEventListener('click', async () => {
+            await apiCall('/reviews', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    book_id: parseInt(document.getElementById('reviewBookIdPost').value, 10),
+                    rating: parseInt(document.getElementById('reviewRating').value, 10),
+                    rew_text: document.getElementById('reviewText').value
+                })
+            }, 'reviewResponse');
+        });
+
+        document.getElementById('updateReviewBtn').addEventListener('click', async () => {
+            const id = document.getElementById('updateReviewId').value;
+            const body = {};
+            const rating = document.getElementById('updateReviewRating').value;
+            const rew_text = document.getElementById('updateReviewText').value;
+            if (rating) body.rating = parseInt(rating, 10);
+            if (rew_text) body.rew_text = rew_text;
+
+            await apiCall(`/reviews/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            }, 'reviewResponse');
+        });
+
+        document.getElementById('deleteReviewBtn').addEventListener('click', async () => {
+            const id = document.getElementById('deleteReviewId').value;
+            await apiCall(`/reviews/${id}`, { method: 'DELETE' }, 'reviewResponse');
+        });
+
+        document.getElementById('checkoutBtn').addEventListener('click', async () => {
+            const bookId = document.getElementById('paymentBookId').value;
+            const data = await apiCall(`/payments/create-checkout-session/${bookId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            }, 'paymentResponse');
+            if (data && data.url) window.location.href = data.url;
+        });
+
+        document.getElementById('checkPurchaseBtn').addEventListener('click', async () => {
+            const bookId = document.getElementById('paymentBookId').value;
+            await apiCall(`/payments/purchases/${bookId}`, { method: 'GET' }, 'paymentResponse');
+        });
+    </script>
+</body>
+</html>

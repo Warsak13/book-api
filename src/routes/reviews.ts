@@ -79,7 +79,7 @@ router.post('/', Auth, userAwareLimiter, validatereview, asynchandler(async (req
     } 
     catch (err) {
         if (err instanceof Error) {
-            // Cast err as a Postgres database error to read code and constraint fields cleanly
+
             const dbError = err as Error & { code?: string; constraint?: string };
             
             if (dbError.code === '23503') {
