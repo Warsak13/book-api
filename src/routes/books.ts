@@ -3,7 +3,7 @@ import { Router, Request, Response } from 'express';
 import { Auth, validatebook, validatebookUpdate, asynchandler, userAwareLimiter } from '../middleware';
 import { pool, redisClient, winston_logger } from '../config';
 
-const router = Router();
+const router: Router = Router();
 
 /**
  * @swagger

@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { Auth, validatereview, asynchandler, userAwareLimiter } from '../middleware';
 import { pool } from '../config';
 
-const router = Router();
+const router: Router = Router();
 /**
  * @swagger
  * /reviews:

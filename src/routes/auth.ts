@@ -8,7 +8,7 @@ import nodemailer from 'nodemailer';
 import { pool } from '../config';
 
 
-const router = Router();
+const router: Router = Router();
 
 const transporter = nodemailer.createTransport({
     service: 'gmail',

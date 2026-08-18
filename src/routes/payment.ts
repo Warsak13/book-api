@@ -4,7 +4,7 @@ import {Auth, asynchandler} from '../middleware';
 import { winston_logger, pool } from '../config';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-const router = Router();
+const router: Router = Router();
 
 interface AuthedRequest extends Request {
     user: { id: number }; 

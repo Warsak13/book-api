@@ -1,6 +1,6 @@
 // middleware.ts
 import { Request, Response, NextFunction } from 'express';
-import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
+import { rateLimit, ipKeyGenerator, RateLimitRequestHandler } from 'express-rate-limit';
 import jwt from 'jsonwebtoken';
 import { winston_logger } from './config';
 
@@ -19,7 +19,7 @@ const customKeyGenerator = (
 };
 
 
-const userAwareLimiter = rateLimit({
+const userAwareLimiter: RateLimitRequestHandler = rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 150,                        
     keyGenerator: customKeyGenerator,
@@ -30,7 +30,7 @@ const userAwareLimiter = rateLimit({
     standardHeaders: true,
 });
 
-const limiter = rateLimit({
+const limiter: RateLimitRequestHandler = rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 100,
     keyGenerator: customKeyGenerator,
@@ -41,7 +41,7 @@ const limiter = rateLimit({
     standardHeaders: true,
 });
 
-const authLimiter = rateLimit({
+const authLimiter: RateLimitRequestHandler = rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 10,
     keyGenerator: (req: Request) => {
